@@ -2,6 +2,8 @@
 // The Microsoft Corporation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
+using System.Collections.Specialized;
 using System.ComponentModel;
 
 using ColorPicker.Helpers;
@@ -10,6 +12,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
+using Windows.Foundation;
 
 namespace ColorPicker.Views
 {
@@ -18,10 +21,27 @@ namespace ColorPicker.Views
     /// </summary>
     public sealed partial class ColorEditorView : UserControl
     {
+        private const double MinimumFormatNameColumnWidth = 48;
+        private ColorEditorViewModel _colorEditorViewModel;
+
+        public static readonly DependencyProperty FormatNameColumnWidthProperty =
+            DependencyProperty.Register(
+                nameof(FormatNameColumnWidth),
+                typeof(double),
+                typeof(ColorEditorView),
+                new PropertyMetadata(MinimumFormatNameColumnWidth));
+
+        public double FormatNameColumnWidth
+        {
+            get => (double)GetValue(FormatNameColumnWidthProperty);
+            private set => SetValue(FormatNameColumnWidthProperty, value);
+        }
+
         public ColorEditorView()
         {
             InitializeComponent();
             Loaded += OnLoaded;
+            Unloaded += OnUnloaded;
         }
 
         private void HistoryContextFlyout_Opening(object sender, object e)
@@ -34,6 +54,72 @@ namespace ColorPicker.Views
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
             EnableHistoryColorsScrollIntoView();
+            AttachColorEditorViewModel();
+        }
+
+        private void OnUnloaded(object sender, RoutedEventArgs e)
+        {
+            DetachColorEditorViewModel();
+        }
+
+        private void AttachColorEditorViewModel()
+        {
+            if (DataContext is not ColorEditorViewModel colorEditorViewModel)
+            {
+                FormatNameColumnWidth = MinimumFormatNameColumnWidth;
+                return;
+            }
+
+            if (ReferenceEquals(_colorEditorViewModel, colorEditorViewModel))
+            {
+                UpdateFormatNameColumnWidth();
+                return;
+            }
+
+            DetachColorEditorViewModel();
+            _colorEditorViewModel = colorEditorViewModel;
+            _colorEditorViewModel.ColorRepresentations.CollectionChanged += ColorRepresentations_CollectionChanged;
+            UpdateFormatNameColumnWidth();
+        }
+
+        private void DetachColorEditorViewModel()
+        {
+            if (_colorEditorViewModel == null)
+            {
+                return;
+            }
+
+            _colorEditorViewModel.ColorRepresentations.CollectionChanged -= ColorRepresentations_CollectionChanged;
+            _colorEditorViewModel = null;
+        }
+
+        private void ColorRepresentations_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+        {
+            UpdateFormatNameColumnWidth();
+        }
+
+        private void UpdateFormatNameColumnWidth()
+        {
+            if (_colorEditorViewModel == null || _colorEditorViewModel.ColorRepresentations.Count == 0)
+            {
+                FormatNameColumnWidth = MinimumFormatNameColumnWidth;
+                return;
+            }
+
+            var measuringTextBlock = new TextBlock
+            {
+                Style = Application.Current.Resources["CaptionTextBlockStyle"] as Style,
+            };
+
+            double width = MinimumFormatNameColumnWidth;
+            foreach (var representation in _colorEditorViewModel.ColorRepresentations)
+            {
+                measuringTextBlock.Text = representation.FormatName;
+                measuringTextBlock.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+                width = Math.Max(width, Math.Ceiling(measuringTextBlock.DesiredSize.Width));
+            }
+
+            FormatNameColumnWidth = width;
         }
 
         /// <summary>
