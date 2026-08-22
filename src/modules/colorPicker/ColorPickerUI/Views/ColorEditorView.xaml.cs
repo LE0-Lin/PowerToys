@@ -106,10 +106,11 @@ namespace ColorPicker.Views
                 return;
             }
 
-            var measuringTextBlock = new TextBlock
+            var measuringTextBlock = new TextBlock();
+            if (Application.Current.Resources.TryGetValue("CaptionTextBlockStyle", out var styleResource) && styleResource is Style style)
             {
-                Style = Application.Current.Resources["CaptionTextBlockStyle"] as Style,
-            };
+                measuringTextBlock.Style = style;
+            }
 
             double width = MinimumFormatNameColumnWidth;
             foreach (var representation in _colorEditorViewModel.ColorRepresentations)
