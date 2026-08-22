@@ -225,7 +225,7 @@
                                     BorderThickness="1"
                                     CornerRadius="{ThemeResource ControlCornerRadius}">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="48" />
+                                        <ColumnDefinition Width="Auto" MinWidth="{Binding ElementName=colorEditorControl, Path=FormatNameColumnWidth}" />
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
